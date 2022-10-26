@@ -9,17 +9,12 @@ typedef struct Bucket Bucket;
 typedef struct Hashmap Hashmap;
 typedef struct LinkedList LinkedList;
 
-size_t hash_func(char *item, size_t map_size);
-LinkedList *new_map_linked(char *key, char *value);
-void add_map_linked(LinkedList *self, char *key, char *value);
 Bucket *new_map_bucket();
 Hashmap *new_map();
+LinkedList *new_map_linked(char *key, char *value);
+size_t hash_func(char *item, size_t map_size);
+void add_map_linked(LinkedList *self, char *key, char *value);
 void insert_map(Hashmap *self, char *key, char *value);
-
-/* so we need a place to store
- * a way to dynamically allocate mem when element is added or removed
- * a function to generate key
- */
 
 struct LinkedList {
 	struct LinkedList *n;
@@ -32,7 +27,7 @@ struct Bucket {
 };
 
 struct Hashmap {
-	Bucket *bucket;
+	Bucket *buckets;
 	size_t len;
 	size_t size;
 };
@@ -45,8 +40,9 @@ size_t hash_func(char *item, size_t map_size)
 	for (size_t i = 0; i <= len - 1; ++i) {
 		acc += item[i];
 	}
+	acc += 1;
 
-	return ((len * acc) / (acc + len)) % (map_size);
+	return ((len - acc) / (acc + len)) % (map_size);
 }
 
 LinkedList *new_map_linked(char *key, char *value)
@@ -93,7 +89,7 @@ Bucket *new_map_bucket()
 Hashmap *new_map()
 {
 	Hashmap *this = malloc(sizeof(Hashmap));
-	this->bucket = new_map_bucket();
+	this->buckets = new_map_bucket();
 	this->len = 0;
 	this->size = BUCKET_ALLOC;
 
@@ -105,11 +101,11 @@ void insert_map(Hashmap *self, char *key, char *value)
 	size_t idx = hash_func(key, self->size);
 
 	/* No collisions */
-	if (self->bucket[idx].linkedlist == NULL) {
-		self->bucket[idx].linkedlist = new_map_linked(key, value);
+	if (self->buckets[idx].linkedlist == NULL) {
+		self->buckets[idx].linkedlist = new_map_linked(key, value);
 	} else {
 		/* Collisions detected */
-		LinkedList *p = self->bucket[idx].linkedlist;
+		LinkedList *p = self->buckets[idx].linkedlist;
 
 		add_map_linked(p, key, value);
 	}
@@ -124,7 +120,7 @@ char *search_map(Hashmap *self, char *key)
 {
 	size_t idx = hash_func(key, self->size);
 
-	LinkedList *p = self->bucket[idx].linkedlist;
+	LinkedList *p = self->buckets[idx].linkedlist;
 	do {
 		if (!strcmp(p->key, key)) {
 			return p->value;
@@ -153,6 +149,7 @@ int main(int argc, char *argv[])
 	insert_map(map, "bruh", "second");
 	insert_map(map, "nuts", "balls");
 	insert_map(map, "hello", "nuts");
+	insert_map(map, "four", "my");
 
 	printf("%s\n", search_map(map, "key"));
 	printf("%s\n", search_map(map, "ANOTHER"));
